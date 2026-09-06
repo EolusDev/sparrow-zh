@@ -28,8 +28,8 @@ def apply(base_dir, dict_path):
                 txt = fh.read()
             orig = txt
             # 1) 摘出注释块，最后再追加回文件尾
-            comments = re.findall(r"\u003c!--.*?-->", txt, flags=re.S)
-            txt_nc = re.sub(r"\u003c!--.*?-->", "", txt, flags=re.S)
+            comments = re.findall(r"<!--.*?-->", txt, flags=re.S)
+            txt_nc = re.sub(r"<!--.*?-->", "", txt, flags=re.S)
             # 2) 替换 text="X" / promptText="X" / helpText="X"
             for attr in ("text", "promptText", "helpText"):
                 def do_attr(m, _attr=attr):
