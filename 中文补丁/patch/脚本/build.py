@@ -39,6 +39,7 @@ import jimage_extract as E        # noqa: E402
 import rebuild_jimage as R        # noqa: E402
 import apply_fxml_trans as F      # noqa: E402
 import apply_java_trans as C      # noqa: E402
+import safe_dict as S             # noqa: E402 字典安全形态还原
 
 SPARROW_MOD = "com.sparrowwallet.sparrow"
 DICT_DIR = os.path.join(PATCH, "翻译字典")
@@ -56,27 +57,35 @@ def err(msg):
     print("[x] " + msg, flush=True)
 
 
-# ---------- 字典加载：优先明文 json，找不到则读取同名 .gz ----------
+def _dump_tmp(name, data):
+    """把已还原的字典写到临时明文 json，返回路径（供 apply 模块按路径读取）。"""
+    tmp = os.path.join(tempfile.gettempdir(), name)
+    with open(tmp, "w", encoding="utf-8", newline="\n") as fh:
+        json.dump(data, fh, ensure_ascii=False)
+    return tmp
+
+
+# ---------- 字典加载：优先明文 json，其次 .gz；统一经 safe_dict 还原安全形态 ----------
 def load_dict_path(filename):
     plain = os.path.join(DICT_DIR, filename)
     if os.path.isfile(plain):
-        return plain
+        data = S.load_json_dict(plain)        # 安全形态自动还原；普通形态无副作用
+        return _dump_tmp(filename, data)
     gz = plain + ".gz"
     if os.path.isfile(gz):
         data = json.loads(gzip.open(gz, "rb").read().decode("utf-8"))
-        tmp = os.path.join(tempfile.gettempdir(), filename)
-        with open(tmp, "w", encoding="utf-8") as fh:
-            json.dump(data, fh, ensure_ascii=False)
+        data = S.decode_dict(data)
         log("字典 %s 由 .gz 解压得到（%d 条）" % (filename, len(data)))
-        return tmp
+        return _dump_tmp(filename, data)
     raise FileNotFoundError("找不到翻译字典：%s（或其 .gz）" % filename)
 
 
 # Java 分批字典（仓库精简形态下用它们自动合并出总字典，合并顺序固定）
+# 注：batch5 因单文件较大，拆为 batch5a / batch5b 两个等价分片，合并时依次载入
 JAVA_PARTS = ["java_trans.json", "java_trans2.json", "java_trans3.json",
               "java_trans_batch2.json", "java_trans_batch3.json",
-              "java_trans_batch4.json", "java_trans_batch5.json",
-              "java_trans_batch6.json"]
+              "java_trans_batch4.json", "java_trans_batch5a.json",
+              "java_trans_batch5b.json", "java_trans_batch6.json"]
 
 # 外部比较串黑名单：这些是 Bitcoin Core / 节点 / 协议返回的英文原文，程序需要拿
 # 常量去和服务器返回做 equals/contains 匹配来判断错误类型，翻译会导致匹配失效，
@@ -90,24 +99,23 @@ EXTERNAL_NEVER_TRANSLATE = {
 
 def load_java_dict():
     """Java 字典解析：优先总字典 all.json，其次 all.json.gz；
-    都没有时从分批明文字典按固定顺序自动合并，并剔除外部比较串黑名单。"""
+    都没有时从分批字典（安全形态）按固定顺序自动合并并还原。所有路径都经过
+    safe_dict 还原；分批里多出的少量键在源码中匹配不到，apply 阶段不会替换。"""
     plain = os.path.join(DICT_DIR, "java_trans_all.json")
     if os.path.isfile(plain):
-        return plain
+        return _dump_tmp("java_trans_all.json", S.load_json_dict(plain))
     gz = plain + ".gz"
     if os.path.isfile(gz):
         data = json.loads(gzip.open(gz, "rb").read().decode("utf-8"))
-        tmp = os.path.join(tempfile.gettempdir(), "java_trans_all.json")
-        with open(tmp, "w", encoding="utf-8") as fh:
-            json.dump(data, fh, ensure_ascii=False)
+        data = S.decode_dict(data)
         log("Java 总字典由 .gz 解压得到（%d 条）" % len(data))
-        return tmp
+        return _dump_tmp("java_trans_all.json", data)
     merged = {}
     used = []
     for name in JAVA_PARTS:
         fp = os.path.join(DICT_DIR, name)
         if os.path.isfile(fp):
-            merged.update(json.load(open(fp, encoding="utf-8")))
+            merged.update(S.load_json_dict(fp))   # 安全形态自动还原
             used.append(name)
     if not merged:
         raise FileNotFoundError("找不到 Java 翻译字典（java_trans_all.json/.gz 或分批字典）")
@@ -116,11 +124,8 @@ def load_java_dict():
         merged.pop(k)
     if dropped:
         log("已跳过 %d 个外部比较串（保留英文以维持错误匹配）" % len(dropped))
-    tmp = os.path.join(tempfile.gettempdir(), "java_trans_all.merged.json")
-    with open(tmp, "w", encoding="utf-8") as fh:
-        json.dump(merged, fh, ensure_ascii=False)
     log("未找到总字典，已由 %d 个分批字典自动合并（%d 条）" % (len(used), len(merged)))
-    return tmp
+    return _dump_tmp("java_trans_all.merged.json", merged)
 
 
 # ---------- 定位原版 modules ----------
