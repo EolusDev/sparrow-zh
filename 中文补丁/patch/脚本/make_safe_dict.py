@@ -37,11 +37,12 @@ for f in FILES:
     p = os.path.join(DICT, f)
     raw0 = json.load(open(p, encoding="utf-8"))
     orig = from_private(raw0)                       # 若是私有区形态则还原，否则不变
+    # 冲突检测：原文不得出现标记样式 @@X@@
     clash = [k for k in orig if "@@" in k] + [v for v in orig.values() if "@@" in v]
     S.dump_safe_dict(orig, p)                       # 写可见标记安全形态
     raw = open(p, encoding="utf-8").read()
     back = S.load_json_dict(p)                      # 再读回并还原
-    bs = raw.count(chr(92))
+    bs = raw.count("\\\\")
     ctrl = sum(1 for ch in raw if ord(ch) < 0x20 and ch not in "\n\r\t")
     ok = (back == orig) and bs == 0 and ctrl == 0 and not clash
     all_ok &= ok
