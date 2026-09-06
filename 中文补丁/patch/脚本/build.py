@@ -56,7 +56,7 @@ def err(msg):
     print("[x] " + msg, flush=True)
 
 
-# ---------- 字典加载：优先明文 json，找不到则读取同名 .gz（GitHub 上为省体积压缩存放） ----------
+# ---------- 字典加载：优先明文 json，找不到则读取同名 .gz ----------
 def load_dict_path(filename):
     plain = os.path.join(DICT_DIR, filename)
     if os.path.isfile(plain):
@@ -70,6 +70,57 @@ def load_dict_path(filename):
         log("字典 %s 由 .gz 解压得到（%d 条）" % (filename, len(data)))
         return tmp
     raise FileNotFoundError("找不到翻译字典：%s（或其 .gz）" % filename)
+
+
+# Java 分批字典（仓库精简形态下用它们自动合并出总字典，合并顺序固定）
+JAVA_PARTS = ["java_trans.json", "java_trans2.json", "java_trans3.json",
+              "java_trans_batch2.json", "java_trans_batch3.json",
+              "java_trans_batch4.json", "java_trans_batch5.json",
+              "java_trans_batch6.json"]
+
+# 外部比较串黑名单：这些是 Bitcoin Core / 节点 / 协议返回的英文原文，程序需要拿
+# 常量去和服务器返回做 equals/contains 匹配来判断错误类型，翻译会导致匹配失效，
+# 因此即使分批字典里误收，合并时也强制剔除（只保留英文）。
+EXTERNAL_NEVER_TRANSLATE = {
+    "min relay fee not met",
+    "mempool min fee not met",
+    "insufficient fee, rejecting replacement",
+}
+
+
+def load_java_dict():
+    """Java 字典解析：优先总字典 all.json，其次 all.json.gz；
+    都没有时从分批明文字典按固定顺序自动合并，并剔除外部比较串黑名单。"""
+    plain = os.path.join(DICT_DIR, "java_trans_all.json")
+    if os.path.isfile(plain):
+        return plain
+    gz = plain + ".gz"
+    if os.path.isfile(gz):
+        data = json.loads(gzip.open(gz, "rb").read().decode("utf-8"))
+        tmp = os.path.join(tempfile.gettempdir(), "java_trans_all.json")
+        with open(tmp, "w", encoding="utf-8") as fh:
+            json.dump(data, fh, ensure_ascii=False)
+        log("Java 总字典由 .gz 解压得到（%d 条）" % len(data))
+        return tmp
+    merged = {}
+    used = []
+    for name in JAVA_PARTS:
+        fp = os.path.join(DICT_DIR, name)
+        if os.path.isfile(fp):
+            merged.update(json.load(open(fp, encoding="utf-8")))
+            used.append(name)
+    if not merged:
+        raise FileNotFoundError("找不到 Java 翻译字典（java_trans_all.json/.gz 或分批字典）")
+    dropped = [k for k in EXTERNAL_NEVER_TRANSLATE if k in merged]
+    for k in dropped:
+        merged.pop(k)
+    if dropped:
+        log("已跳过 %d 个外部比较串（保留英文以维持错误匹配）" % len(dropped))
+    tmp = os.path.join(tempfile.gettempdir(), "java_trans_all.merged.json")
+    with open(tmp, "w", encoding="utf-8") as fh:
+        json.dump(merged, fh, ensure_ascii=False)
+    log("未找到总字典，已由 %d 个分批字典自动合并（%d 条）" % (len(used), len(merged)))
+    return tmp
 
 
 # ---------- 定位原版 modules ----------
@@ -178,7 +229,7 @@ def main():
     ok("FXML 界面文件更新 %d 个" % nf)
 
     # 3) Java class
-    java_dict = load_dict_path("java_trans_all.json")
+    java_dict = load_java_dict()
     cc, rp = C.apply(os.path.join(tree, SPARROW_MOD), java_dict)
     ok("Java 类改写 %d 个，字符串替换 %d 处" % (cc, rp))
 
