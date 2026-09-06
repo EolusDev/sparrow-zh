@@ -41,7 +41,10 @@ python 中文补丁/patch/脚本/build.py --modules "路径\modules" --out modul
 
 1. 安装新版原版 Sparrow，拿到它的 `runtime\lib\modules`
 2. 运行 `build.py` 对新镜像重新构建。绝大部分界面文字沿用现有 2359 条字典（由分批字典自动合并）
-3. 用 `scan_remaining.py` 扫描新版里尚未覆盖的英文字面量
+3. 用 `scan_remaining.py` 扫描新版里尚未覆盖的英文字面量：
+   ```bash
+   python 中文补丁/patch/脚本/scan_remaining.py
+   ```
 4. 把新增可见文案补进 `翻译字典\` 下对应的分批字典（或本地合并出的 java_trans_all.json；FXML 文案补 fxml_trans.json），重跑 `build.py` 即可
 5. 与外部值比较的字符串（协议判断、过滤排序、SQL、日志）**不可翻译**，判别口径见 `中文补丁\安装说明.md`
 
@@ -50,7 +53,7 @@ python 中文补丁/patch/脚本/build.py --modules "路径\modules" --out modul
 ## 特性
 
 - **完整汉化**：31 个界面布局文件（FXML）+ 439 个 Java 类、2444 处界面文字中文化，成品镜像共 477 个资源含中文、20481 个中文字符
-- **翻译字典 2359 条**：人工分批审定（仓库以 8 个分批字典存放，构建时自动合并），覆盖主界面、设置、交易、UTXO、多签、24 款硬件钱包导入向导、Payjoin、消息签名、私钥清扫、助记词等全部界面
+- **翻译字典 2359 条**：人工分批审定（仓库以 9 个分批字典存放，构建时自动合并），覆盖主界面、设置、交易、UTXO、多签、24 款硬件钱包导入向导、Payjoin、消息签名、私钥清扫、助记词等全部界面
 - **纯 Python 工具链**：自行实现 jimage 解包 / 常量池改写 / 镜像重建 / 校验，只用标准库，别人克隆后无需 JDK 即可复现
 - **绿色便携**：与安装位置无关，复制 / 移动 / 换机 / 带空格路径均直接可用（已实测）
 - **可回滚**：保留原始镜像，一键还原英文原版
@@ -59,11 +62,9 @@ python 中文补丁/patch/脚本/build.py --modules "路径\modules" --out modul
 
 ---
 
-## 截图
+## 界面效果
 
-![Sparrow 中文界面](images/screenshot.png)
-
-菜单「文件 / 视图 / 工具 / 帮助」、欢迎页「新建钱包 / 打开钱包 / 导入钱包 / 拖拽文件以打开」、底部状态栏「未连接（点击右侧开关进行连接）」均为中文。
+菜单「文件 / 视图 / 工具 / 帮助」、欢迎页「新建钱包 / 打开钱包 / 导入钱包 / 拖拽文件以打开」、底部状态栏「未连接（点击右侧开关进行连接）」均为中文，设置、交易、UTXO、多签与硬件钱包导入向导等全部对话框同样完成中文化（运行截图见 Release 资产）。
 
 ---
 
@@ -76,7 +77,7 @@ sparrow-zh/
 │   ├── 应用补丁.ps1 / 还原.ps1  # PowerShell 装回 / 还原脚本
 │   ├── 安装说明.md             # 详细原理、增量翻译与“不可翻译”判别口径
 │   └── patch/
-│       ├── 翻译字典/            # fxml_trans.json + 8 个 java_trans 分批字典（构建时自动合并）
+│       ├── 翻译字典/            # fxml_trans.json + 9 个 java_trans 分批字典（构建时自动合并）
 │       └── 脚本/
 │           ├── build.py            # ★ 一键编排：解包→翻译→重建→校验→(装回)
 │           ├── jimage_extract.py   # 纯 Python jimage 解包（替代 JDK jimage extract）
@@ -85,7 +86,6 @@ sparrow-zh/
 │           ├── apply_java_trans.py # Java class 常量池字面量翻译（不动标识符）
 │           ├── rebuild_jimage.py   # 就地重建 jimage（保持哈希表/字符串表不变）
 │           └── scan_remaining.py   # 扫描残留英文字面量，辅助增量翻译
-├── images/screenshot.png
 ├── README.md / CHANGELOG.md / LICENSE / .gitignore
 └── Sparrow汉化使用说明与修改记录.txt
 ```

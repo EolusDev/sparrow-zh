@@ -7,6 +7,10 @@ _jdk/
 中文补丁/patch/modules.patched
 中文补丁/backup/modules.original
 
+# ---- 合并后的明文总字典（本地编辑用，仓库以 9 个分批字典为准，不提交） ----
+java_trans_all.json
+java_trans_all.json.gz
+
 # ---- 系统/临时文件 ----
 *.bmp
 *.tmp
