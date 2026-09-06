@@ -42,7 +42,7 @@ for f in FILES:
     S.dump_safe_dict(orig, p)                       # 写可见标记安全形态
     raw = open(p, encoding="utf-8").read()
     back = S.load_json_dict(p)                      # 再读回并还原
-    bs = raw.count("\\\\")
+    bs = raw.count(chr(92))
     ctrl = sum(1 for ch in raw if ord(ch) < 0x20 and ch not in "\n\r\t")
     ok = (back == orig) and bs == 0 and ctrl == 0 and not clash
     all_ok &= ok
