@@ -4,8 +4,8 @@
 用法：
   1) 双击运行 / 不带参数：进入交互模式，自动探测已安装的 Sparrow。
   2) 命令行：
-       python build.py --src "C:\\Software\\Sparrow"
-       python build.py --src "C:\\Software\\Sparrow" --install
+       python build.py --src "D:\\Sparrow"
+       python build.py --src "D:\\Sparrow" --install
        python build.py --modules "D:\\path\\to\\modules" --out patched.modules
 
 参数：
